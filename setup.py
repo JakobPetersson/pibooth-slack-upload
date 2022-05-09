@@ -9,7 +9,7 @@ from setuptools import setup
 
 HERE = osp.abspath(osp.dirname(__file__))
 sys.path.insert(0, HERE)
-import pibooth_s3_upload as plugin  # nopep8 : import shall be done after adding setup to paths
+import pibooth_slack_upload as plugin  # nopep8 : import shall be done after adding setup to paths
 
 
 def main():
@@ -43,8 +43,7 @@ def main():
             'Raspberry Pi',
             'camera',
             'photobooth',
-            'aws',
-            's3'
+            'slack',
         ],
         py_modules=['pibooth_slack_upload'],
         python_requires=">=3.6",
