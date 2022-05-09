@@ -1,15 +1,9 @@
 # -*- coding: utf-8 -*-
 
-"""pibooth plugin for uploading pictures to an S3 bucket"""
+"""pibooth plugin for uploading pictures to Slack channel"""
 
 import os
-import boto3
-
-try:
-    from botocore.exceptions import ClientError
-except ImportError:
-    InstalledAppFlow = None
-    pass
+import subprocess
 
 import pibooth
 from pibooth.utils import LOGGER
@@ -17,54 +11,55 @@ from pibooth.utils import LOGGER
 
 __version__ = "1.0.0"
 
-SECTION = 'S3'
-
+SECTION = 'SLACK'
+SLACK_BASE_URL = 'https://slack.com'
 
 @pibooth.hookimpl
 def pibooth_configure(cfg):
     """Declare the new configuration options"""
-    cfg.add_option(SECTION, 'aws_access_key', '', "AWS Access Key")
-    cfg.add_option(SECTION, 'aws_secret_key', '', "AWS Secret Key")
-    cfg.add_option(SECTION, 's3_bucket_name', '',
-        "AWS S3 bucket name for uploading files",
-        "Bucket name", '')
-    cfg.add_option(SECTION, 's3_prefix', '',
-        "(Optional) Path prefix within AWS S3 bucket (ex: 'some-event-name/')",
-        "Path prefix (optional)", '')
+    cfg.add_option(SECTION, 'slack_token', '', "Slack Token")
+    cfg.add_option(SECTION, 'slack_channel_id', '', "Slack Channel Id")
 
 
 @pibooth.hookimpl
 def pibooth_startup(app, cfg):
-    """Verify AWS credentials"""
-    aws_access_key = cfg.get(SECTION, 'aws_access_key')
-    aws_secret_key = cfg.get(SECTION, 'aws_secret_key')
-    s3_bucket_name = cfg.get(SECTION, 's3_bucket_name')
+    """Verify Slack credentials"""
+    slack_token = cfg.get(SECTION, 'slack_token')
+    slack_channel_id = cfg.get(SECTION, 'slack_channel_id')
 
-    if not aws_access_key:
-        LOGGER.error("AWS Access Key not defined in ["+SECTION+"][aws_access_key], uploading deactivated")
-    elif not aws_secret_key:
-        LOGGER.error("AWS Secret Key not defined in ["+SECTION+"][aws_secret_key], uploading deactivated")
-    elif not s3_bucket_name:
-        LOGGER.error("S3 Bucket Name not defined in ["+SECTION+"][s3_bucket_name], uploading deactivated")
+    if not slack_token:
+        LOGGER.error("Slack Token not defined in ["+SECTION+"][slack_token], uploading deactivated")
+    elif not slack_channel_id:
+        LOGGER.error("Slack Channel Id not defined in ["+SECTION+"][slack_channel_id], uploading deactivated")
     else:
-        LOGGER.info("Initializing S3 client")
-        app.s3_client = boto3.client(
-          's3',
-          aws_access_key_id=aws_access_key,
-          aws_secret_access_key=aws_secret_key
-        )
+        LOGGER.info("Enabled Slack upload")
+        app.slack_upload_enabled = True
 
 
 @pibooth.hookimpl
 def state_processing_exit(app, cfg):
-    """Upload picture to S3 bucket"""
-    if hasattr(app, 's3_client'):
-        s3_prefix = cfg.get(SECTION, 's3_prefix').strip('"')
-        s3_bucket_name = cfg.get(SECTION, 's3_bucket_name').strip('"')
-        upload_path = s3_prefix + os.path.basename(app.previous_picture_file)
+    """Upload picture to Slack Channel"""
+    if hasattr(app, 'slack_upload_enabled'):
+        LOGGER.info("Attempting to upload file to slack: {}".format(app.previous_picture_file))
 
-        try:
-            response = app.s3_client.upload_file(app.previous_picture_file, s3_bucket_name, upload_path)
-            LOGGER.info("File uploaded to S3: " + upload_path)
-        except ClientError as e:
-            LOGGER.error(e)
+        slack_token = cfg.get(SECTION, 'slack_token').strip('"')
+        slack_channel_id = cfg.get(SECTION, 'slack_channel_id').strip('"')
+
+        curl_cmd = subprocess.run(
+            [
+                "curl",
+                "{}/api/files.upload".format(SLACK_BASE_URL),
+                "-H", "Authorization: Bearer {}".format(slack_token),
+                "-F", "file=@{}".format(app.previous_picture_file),
+                "-F", "channels={}".format(slack_channel_id),
+                "--silent",
+                "--show-error"
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
+        if curl_cmd.returncode == 0:
+            LOGGER.info("File uploaded to Slack successfully!")
+        else:
+            LOGGER.error("Upload to Slack failed!")
