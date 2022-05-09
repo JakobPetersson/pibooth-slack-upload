@@ -33,10 +33,10 @@ def main():
             'Natural Language :: English',
             'Topic :: Multimedia :: Graphics :: Capture :: Digital Camera',
         ],
-        author="Joshua Higgins",
-        author_email="hello@joshuahiggins.com",
-        url="https://github.com/joshuahiggins/pibooth-s3-upload",
-        download_url="https://github.com/joshuahiggins/pibooth-s3-upload/archive/{}.tar.gz".format(plugin.__version__),
+        author="",
+        author_email="",
+        url="https://github.com/JakobPetersson/pibooth-slack-upload",
+        download_url="https://github.com/JakobPetersson/pibooth-slack-upload/archive/{}.tar.gz".format(plugin.__version__),
         license='GPLv3',
         platforms=['unix', 'linux'],
         keywords=[
@@ -46,14 +46,13 @@ def main():
             'aws',
             's3'
         ],
-        py_modules=['pibooth_s3_upload'],
+        py_modules=['pibooth_slack_upload'],
         python_requires=">=3.6",
         install_requires=[
-            'pibooth>=2.0.0',
-            'boto3>=1.22.0'
+            'pibooth>=2.0.0'
         ],
         zip_safe=False,  # Don't install the lib as an .egg zipfile
-        entry_points={'pibooth': ["pibooth_s3_upload = pibooth_s3_upload"]},
+        entry_points={'pibooth': ["pibooth_slack_upload = pibooth_slack_upload"]},
     )
 
 
